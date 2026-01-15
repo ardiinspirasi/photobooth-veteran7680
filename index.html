@@ -11,22 +11,21 @@
             box-sizing: border-box;
         }
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #000;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        html, body {
+            width: 100%;
+            height: 100%;
             overflow: hidden;
+            background: #000;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         .container {
             position: relative;
-            width: 100vw;
-            height: 100vh;
-            max-width: 100%;
-            max-height: 100%;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             background: #000;
         }
 
@@ -34,29 +33,51 @@
             display: none;
             width: 100%;
             height: 100%;
+            position: relative;
         }
 
         .screen.active {
-            display: block;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .camera-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
         }
 
         .camera-container {
             position: relative;
             width: 100%;
-            height: 100%;
+            max-width: 100vh;
+            aspect-ratio: 9/16;
             background: #000;
             overflow: hidden;
         }
 
-        #video, #preview {
+        #video {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            display: block;
         }
 
-        /* Mirror effect for front camera */
         #video.mirror {
             transform: scaleX(-1);
+        }
+
+        #preview {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            background: #000;
         }
 
         .frame-overlay {
@@ -68,18 +89,20 @@
             pointer-events: none;
             opacity: 1;
             z-index: 10;
+            object-fit: cover;
         }
 
         canvas {
             display: none;
         }
 
-        /* Floating controls */
         .controls {
             position: absolute;
             bottom: 0;
-            left: 0;
-            right: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 100vh;
             padding: 30px 20px;
             background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 70%, transparent 100%);
             z-index: 20;
@@ -167,7 +190,6 @@
             border: 2px solid rgba(255,255,255,0.3);
         }
 
-        /* Loading indicator */
         .loading {
             position: absolute;
             top: 50%;
@@ -208,46 +230,58 @@
                 height: 65px;
             }
         }
+
+        /* Landscape mode warning */
+        @media (orientation: landscape) {
+            .camera-container {
+                max-height: 100vw;
+                aspect-ratio: 9/16;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <!-- Camera Screen -->
         <div id="cameraScreen" class="screen active">
-            <div class="camera-container">
-                <div class="loading" id="loadingIndicator">
-                    <div class="spinner"></div>
-                    <p>Memuat kamera...</p>
+            <div class="camera-wrapper">
+                <div class="camera-container">
+                    <div class="loading" id="loadingIndicator">
+                        <div class="spinner"></div>
+                        <p>Memuat kamera...</p>
+                    </div>
+                    <video id="video" autoplay playsinline muted></video>
+                    <img src="frame_veteran.png" alt="Frame" class="frame-overlay" onerror="console.error('Frame not found')">
                 </div>
-                <video id="video" autoplay playsinline muted></video>
-                <img src="frame_veteran.png" alt="Frame" class="frame-overlay" onerror="console.error('Frame not found')">
-            </div>
-            <div class="controls">
-                <div class="btn-group">
-                    <button class="btn-switch" onclick="switchCamera()" title="Ganti Kamera">
-                        🔄
-                    </button>
-                    <button class="btn-capture" onclick="takePhoto()">
-                        📸
-                    </button>
-                    <div style="width: 50px;"></div> <!-- Spacer for balance -->
+                <div class="controls">
+                    <div class="btn-group">
+                        <button class="btn-switch" onclick="switchCamera()" title="Ganti Kamera">
+                            🔄
+                        </button>
+                        <button class="btn-capture" onclick="takePhoto()">
+                            📸
+                        </button>
+                        <div style="width: 50px;"></div>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Preview Screen -->
         <div id="previewScreen" class="screen">
-            <div class="camera-container">
-                <img id="preview" alt="Preview">
-            </div>
-            <div class="controls">
-                <div class="btn-group">
-                    <button class="btn btn-secondary" onclick="retakePhoto()">
-                        🔄 Foto Ulang
-                    </button>
-                    <button class="btn btn-success" onclick="savePhoto()">
-                        💾 Simpan
-                    </button>
+            <div class="camera-wrapper">
+                <div class="camera-container">
+                    <img id="preview" alt="Preview">
+                </div>
+                <div class="controls">
+                    <div class="btn-group">
+                        <button class="btn btn-secondary" onclick="retakePhoto()">
+                            🔄 Foto Ulang
+                        </button>
+                        <button class="btn btn-success" onclick="savePhoto()">
+                            💾 Simpan
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -257,7 +291,7 @@
 
     <script>
         let stream = null;
-        let currentFacingMode = 'user'; // 'user' = front, 'environment' = back
+        let currentFacingMode = 'user';
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const preview = document.getElementById('preview');
@@ -268,39 +302,35 @@
         const frameImage = new Image();
         frameImage.src = 'frame_veteran.png';
 
-        // Show screen
         function showScreen(screenId) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(screenId).classList.add('active');
         }
 
-        // Start camera
         async function startCamera(facingMode = 'user') {
             try {
                 loadingIndicator.style.display = 'block';
-                
-                // Stop existing stream
                 stopCamera();
 
+                // Request camera with exact 9:16 ratio
                 stream = await navigator.mediaDevices.getUserMedia({
                     video: {
                         facingMode: facingMode,
                         width: { ideal: 1080 },
-                        height: { ideal: 1920 }
+                        height: { ideal: 1920 },
+                        aspectRatio: { ideal: 0.5625 } // 9:16
                     }
                 });
                 
                 video.srcObject = stream;
                 currentFacingMode = facingMode;
                 
-                // Add mirror effect for front camera
                 if (facingMode === 'user') {
                     video.classList.add('mirror');
                 } else {
                     video.classList.remove('mirror');
                 }
                 
-                // Hide loading when video is ready
                 video.onloadedmetadata = () => {
                     loadingIndicator.style.display = 'none';
                 };
@@ -311,7 +341,6 @@
             }
         }
 
-        // Stop camera
         function stopCamera() {
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
@@ -319,47 +348,59 @@
             }
         }
 
-        // Switch camera
         function switchCamera() {
             const newFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
             startCamera(newFacingMode);
         }
 
-        // Take photo
         function takePhoto() {
-            // Set canvas size
+            // Set canvas to exact 9:16 ratio
             canvas.width = 1080;
             canvas.height = 1920;
 
-            // Save the current transform state
             ctx.save();
 
-            // If front camera (mirrored), flip the canvas horizontally
+            // Mirror for front camera
             if (currentFacingMode === 'user') {
                 ctx.translate(canvas.width, 0);
                 ctx.scale(-1, 1);
             }
 
-            // Draw video frame
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            // Calculate video dimensions to fill canvas without distortion
+            const videoAspect = video.videoWidth / video.videoHeight;
+            const canvasAspect = canvas.width / canvas.height;
+            
+            let drawWidth, drawHeight, drawX, drawY;
+            
+            if (videoAspect > canvasAspect) {
+                // Video is wider - fit to height
+                drawHeight = canvas.height;
+                drawWidth = drawHeight * videoAspect;
+                drawX = (canvas.width - drawWidth) / 2;
+                drawY = 0;
+            } else {
+                // Video is taller - fit to width
+                drawWidth = canvas.width;
+                drawHeight = drawWidth / videoAspect;
+                drawX = 0;
+                drawY = (canvas.height - drawHeight) / 2;
+            }
 
-            // Restore the transform state before drawing the frame
+            // Draw video with proper scaling
+            ctx.drawImage(video, drawX, drawY, drawWidth, drawHeight);
+
             ctx.restore();
 
-            // Check if frame is loaded
+            // Draw frame overlay
             if (frameImage.complete && frameImage.naturalHeight !== 0) {
-                // Draw frame on top (frame is NOT mirrored)
                 ctx.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
                 
-                // Convert to image
                 const imageData = canvas.toDataURL('image/png');
                 preview.src = imageData;
                 
-                // Stop camera and show preview
                 stopCamera();
                 showScreen('previewScreen');
             } else {
-                // Wait for frame to load
                 frameImage.onload = function() {
                     ctx.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
                     
@@ -371,9 +412,8 @@
                 };
 
                 frameImage.onerror = function() {
-                    alert('Error: Frame "frame_veteran.png" tidak ditemukan!\n\nPastikan file ada di folder yang sama dengan index.html');
+                    alert('Error: Frame "frame_veteran.png" tidak ditemukan!');
                     
-                    // Save photo without frame
                     const imageData = canvas.toDataURL('image/png');
                     preview.src = imageData;
                     stopCamera();
@@ -382,32 +422,27 @@
             }
         }
 
-        // Save photo to gallery
         function savePhoto() {
             const link = document.createElement('a');
             link.download = `veteran7680-${Date.now()}.png`;
             link.href = preview.src;
             link.click();
             
-            // Back to camera after short delay
             setTimeout(() => {
                 showScreen('cameraScreen');
                 startCamera(currentFacingMode);
             }, 500);
         }
 
-        // Retake photo
         function retakePhoto() {
             showScreen('cameraScreen');
             startCamera(currentFacingMode);
         }
 
-        // Start camera on load
         window.addEventListener('load', () => {
             startCamera('user');
         });
 
-        // Cleanup on page unload
         window.addEventListener('beforeunload', stopCamera);
     </script>
 </body>
