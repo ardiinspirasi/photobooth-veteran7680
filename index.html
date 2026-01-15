@@ -55,10 +55,28 @@
         .camera-container {
             position: relative;
             width: 100%;
-            max-width: 100vh;
+            height: 100%;
+            max-width: calc(100vh * 9 / 16);
+            max-height: calc(100vw * 16 / 9);
             aspect-ratio: 9/16;
             background: #000;
             overflow: hidden;
+            margin: 0 auto;
+        }
+        
+        /* Ensure container fits both portrait and landscape */
+        @media (orientation: portrait) {
+            .camera-container {
+                width: 100%;
+                height: auto;
+            }
+        }
+        
+        @media (orientation: landscape) {
+            .camera-container {
+                width: auto;
+                height: 100%;
+            }
         }
 
         #video {
@@ -99,10 +117,8 @@
         .controls {
             position: absolute;
             bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 100%;
-            max-width: 100vh;
+            left: 0;
+            right: 0;
             padding: 30px 20px;
             background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 70%, transparent 100%);
             z-index: 20;
@@ -235,6 +251,13 @@
             .camera-container {
                 max-height: 100vw;
                 aspect-ratio: 9/16;
+            }
+        }
+
+        /* Safe area for devices with notch */
+        @supports (padding: max(0px)) {
+            .controls {
+                padding-bottom: max(30px, env(safe-area-inset-bottom));
             }
         }
     </style>
