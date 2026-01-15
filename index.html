@@ -64,7 +64,7 @@
         #video {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
             display: block;
         }
 
@@ -89,7 +89,7 @@
             pointer-events: none;
             opacity: 1;
             z-index: 10;
-            object-fit: cover;
+            object-fit: contain;
         }
 
         canvas {
@@ -231,7 +231,6 @@
             }
         }
 
-        /* Landscape mode warning */
         @media (orientation: landscape) {
             .camera-container {
                 max-height: 100vw;
@@ -312,13 +311,12 @@
                 loadingIndicator.style.display = 'block';
                 stopCamera();
 
-                // Request camera with exact 9:16 ratio
+                // Request camera TANPA memaksa aspect ratio - biar natural
                 stream = await navigator.mediaDevices.getUserMedia({
                     video: {
                         facingMode: facingMode,
-                        aspectRatio: { exact: 0.5625 }, // Force 9:16 ratio
-                        width: { ideal: 1080 },
-                        height: { ideal: 1920 }
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
                     }
                 });
                 
@@ -333,6 +331,7 @@
                 
                 video.onloadedmetadata = () => {
                     loadingIndicator.style.display = 'none';
+                    console.log('Camera resolution:', video.videoWidth, 'x', video.videoHeight);
                 };
                 
             } catch (err) {
@@ -354,25 +353,32 @@
         }
 
         function takePhoto() {
-            // Set canvas to exact 9:16 ratio
-            canvas.width = 1080;
-            canvas.height = 1920;
+            // Gunakan resolusi asli video (tidak dipaksa 9:16)
+            const videoWidth = video.videoWidth;
+            const videoHeight = video.videoHeight;
+            
+            console.log('Capturing photo at:', videoWidth, 'x', videoHeight);
+            
+            // Set canvas sesuai resolusi asli video
+            canvas.width = videoWidth;
+            canvas.height = videoHeight;
 
             ctx.save();
 
-            // Mirror for front camera
+            // Mirror untuk front camera
             if (currentFacingMode === 'user') {
                 ctx.translate(canvas.width, 0);
                 ctx.scale(-1, 1);
             }
 
-            // Draw full video without cropping
+            // Draw video penuh tanpa crop
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
             ctx.restore();
 
-            // Draw frame overlay
+            // Draw frame overlay - SCALE frame ke ukuran canvas
             if (frameImage.complete && frameImage.naturalHeight !== 0) {
+                // Frame akan di-scale dari 1080x1920 ke ukuran canvas
                 ctx.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
                 
                 const imageData = canvas.toDataURL('image/png');
